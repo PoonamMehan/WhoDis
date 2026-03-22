@@ -63,7 +63,7 @@ export default function ProfileHeader({ profileData }: { profileData: unknown })
     <div className="profile-card px-6 py-4">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-start gap-4">
-          {/* Avatar with glow ring */}
+        
           {profile.avatarUrl && (
             <div className="relative flex-shrink-0">
               <div className="absolute -inset-0.5 rounded-full bg-gradient-to-br from-[#6d28d9]/40 to-[#7c3aed]/20 blur-sm" />
@@ -88,7 +88,7 @@ export default function ProfileHeader({ profileData }: { profileData: unknown })
                   <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81C14.67 2.88 13.43 2 12 2s-2.67.88-3.34 2.19c-1.39-.46-2.9-.2-3.91.81s-1.27 2.52-.81 3.91C2.88 9.33 2 10.57 2 12s.88 2.67 2.19 3.34c-.46 1.39-.2 2.9.81 3.91s2.52 1.27 3.91.81C9.33 21.12 10.57 22 12 22s2.67-.88 3.34-2.19c1.39.46 2.9.2 3.91-.81s1.27-2.52.81-3.91C21.12 14.67 22 13.43 22 12zm-11.07 4.83-3.07-3.07 1.06-1.06 2.01 2.01 4.61-4.61 1.06 1.06-5.67 5.67z" />
                 </svg>
               )}
-              {/* Source badge */}
+            
               <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#27272a] text-[#71717a]">
                 {profile.source}
               </span>
@@ -118,7 +118,7 @@ export default function ProfileHeader({ profileData }: { profileData: unknown })
           </div>
         </div>
 
-        {/* Stats row */}
+    
         <div className="flex items-center gap-3 mt-3 flex-wrap">
           {profile.followers != null && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#18181b] border border-[#27272a] rounded-lg">

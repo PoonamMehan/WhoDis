@@ -23,7 +23,6 @@ export async function POST(request: NextRequest) {
 Here is the profile data:
 ${JSON.stringify(profileData, null, 2)}`;
 
-    // Build Gemini contents array from conversation messages
     const contents = messages.map(
       (msg: { role: string; content: string }) => ({
         role: msg.role === "assistant" ? "model" : "user",

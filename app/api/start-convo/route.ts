@@ -43,7 +43,6 @@ async function fetchTwitterProfile(username: string) {
     throw { status: 404, message: "This user does not exist or their account is private." };
   }
 
-  // Fetch replies
   let repliesData = null;
   try {
     const repliesRes = await fetch(
@@ -79,7 +78,6 @@ async function fetchLinkedInProfile(url: string) {
     process.env.BRIGHTDATA_API_KEY ||
     "3a0e3f6d-6e44-4803-a657-c84687de2ee1";
 
-  // Trigger the scrape
   const scrapeRes = await fetch(
     `https://api.brightdata.com/datasets/v3/scrape?dataset_id=gd_l1viktl72bvl7bjuj0&notify=false&include_errors=true`,
     {
@@ -104,14 +102,12 @@ async function fetchLinkedInProfile(url: string) {
   const data = await scrapeRes.json();
   console.log("LinkedIn data:", JSON.stringify(data).slice(0, 500));
 
-  // BrightData returns an array of results
   const profile = Array.isArray(data) ? data[0] : data;
 
   if (!profile || profile.error) {
     throw { status: 404, message: "Could not find this LinkedIn profile. The URL may be incorrect or the profile is private." };
   }
 
-  // Fetch LinkedIn posts
   let postsData = null;
   try {
     const postsRes = await fetch(

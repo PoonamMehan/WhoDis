@@ -131,7 +131,7 @@ export default function PersonaPanel() {
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0f] text-[#fafafa]">
-      {/* Panel Header */}
+    
       <div className="flex items-center justify-between px-5 py-3 border-b border-[#1e1b2e]">
         <div className="flex items-center gap-2.5">
           {avatarUrl ? (
@@ -165,7 +165,6 @@ export default function PersonaPanel() {
         </button>
       </div>
 
-      {/* Loading State */}
       {isPersonaLoading && (
         <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6">
           <div className="persona-loading-card w-full max-w-xs rounded-2xl p-6 flex flex-col items-center gap-4">
@@ -188,7 +187,6 @@ export default function PersonaPanel() {
         </div>
       )}
 
-      {/* Error State */}
       {personaError && !isPersonaLoading && (
         <div className="flex-1 flex items-center justify-center px-6">
           <div className="px-4 py-3 bg-red-950/20 border border-red-900/30 text-red-400 text-sm rounded-xl max-w-sm w-full text-center">
@@ -197,7 +195,6 @@ export default function PersonaPanel() {
         </div>
       )}
 
-      {/* Chat Messages */}
       {!isPersonaLoading && !personaError && (
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
           {personaMessages.map((msg, i) => (
@@ -236,7 +233,6 @@ export default function PersonaPanel() {
         </div>
       )}
 
-      {/* Input bar */}
       {personaProfile && !isPersonaLoading && (
         <div className="border-t border-[#1e1b2e] px-5 py-4 bg-[#0a0a0f]">
           <form onSubmit={handleSendMessage} className="flex items-center gap-3">
