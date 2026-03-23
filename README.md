@@ -8,6 +8,10 @@ A chatbot that lets you look up someone's public X (Twitter) or LinkedIn profile
 - **Q&A chat** — Ask anything about the person. The AI answers based on the fetched data with streamed responses.
 - **Persona mode** — Click "Persona" to open a side panel where the AI *becomes* that person. It extracts their personality traits, writing style, and language patterns, then responds in character.
 
+## App Architecture
+<img width="1303" height="768" alt="image" src="https://github.com/user-attachments/assets/466b20ee-0d47-4622-b32b-8ec71f7b73f7" />
+
+
 ## Tech stack
 
 - **Next.js 16** (App Router) with TypeScript
