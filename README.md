@@ -11,6 +11,12 @@ A chatbot that lets you look up someone's public X (Twitter) or LinkedIn profile
 ## App Architecture
 <img width="1303" height="768" alt="image" src="https://github.com/user-attachments/assets/466b20ee-0d47-4622-b32b-8ec71f7b73f7" />
 
+## Scalable Architecture
+<img width="1384" height="712" alt="image" src="https://github.com/user-attachments/assets/df50f272-8fa1-4c25-b235-c0e6868c2934" />
+<img width="1381" height="250" alt="image" src="https://github.com/user-attachments/assets/ad72c6b2-0017-43fa-989b-d5f3adb6c893" />
+
+
+
 
 ## Tech stack
 
