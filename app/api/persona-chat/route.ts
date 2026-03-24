@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { getStandardLimiter, checkRateLimit } from "@/app/lib/rate-limit";
+import { queryRelevant } from "@/app/lib/pinecone";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -28,8 +29,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleExtract(body: { profileData: unknown }) {
-  const { profileData } = body;
+async function handleExtract(body: {
+  profileData: unknown;
+  summary?: string;
+}) {
+  const { profileData, summary } = body;
 
   if (!profileData) {
     return Response.json(
@@ -38,16 +42,38 @@ async function handleExtract(body: { profileData: unknown }) {
     );
   }
 
-  const extractionPrompt = `You are a personality analyst. Given raw Twitter/X profile JSON data, extract and return a JSON object with exactly these keys:
-- "traits": a comma-separated list of 5-8 personality traits in plain English (e.g. "opinionated, witty, technical, passionate")
-- "writingStyle": 2-3 sentences describing how this person writes (tone, sentence length, vocabulary level, use of humour, formality)
-- "languagePatterns": specific patterns (e.g. "uses rhetorical questions often, starts tweets with lowercase, heavy use of ellipsis")
-- "summary": one paragraph description of this person's communication persona
+  // Build a focused input for extraction: summary + profile snippet (not raw JSON)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pd = profileData as any;
+  const source = pd._source || "twitter";
+
+  let profileSnippet = "";
+  if (source === "twitter") {
+    const u = pd.user || {};
+    profileSnippet = `Platform: X/Twitter\nName: ${u.name || "unknown"}\nHandle: @${u.screen_name || u.id || "unknown"}\nBio: ${u.desc || "N/A"}\nFollowers: ${u.sub_count || "N/A"}\nFollowing: ${u.friends || "N/A"}`;
+  } else {
+    profileSnippet = `Platform: LinkedIn\nName: ${pd.name || "unknown"}\nHandle: ${pd.id || "N/A"}\nHeadline: ${pd.headline || "N/A"}\nAbout: ${pd.about || "N/A"}\nLocation: ${pd.city || pd.location || "N/A"}`;
+  }
+
+  const dataForExtraction = summary
+    ? `${profileSnippet}\n\n## Analyzed summary of their online presence:\n${summary}`
+    : `${profileSnippet}\n\n## Raw profile data:\n${JSON.stringify(profileData).slice(0, 15000)}`;
+
+  const extractionPrompt = `You are a deep personality analyst. Based on the following social media profile data, extract a detailed persona profile. Return a JSON object with exactly these keys:
+
+- "traits": a comma-separated list of 8-12 personality traits (e.g. "opinionated, witty, technically deep, impatient with mediocrity, contrarian, self-deprecating, passionate about open source")
+- "writingStyle": 3-4 sentences describing exactly how this person writes — tone, sentence length, vocabulary level, formality, how they structure arguments, whether they use threads or single posts
+- "languagePatterns": specific language patterns WITH examples pulled from their content (e.g. "frequently starts tweets with 'Hot take:', uses '...' for dramatic pauses, drops articles like 'the' in casual speech, uses lowercase for emphasis")
+- "topicsAndInterests": what they talk about most — their domain expertise, recurring themes, industries they engage with, hobbies or passions that show up in their posts
+- "opinionsAndStances": strong views they've expressed — things they advocate for or against, recurring arguments they make, hills they'd die on
+- "humorStyle": how they use humor — sarcastic, dry, self-deprecating, meme-heavy, observational, absurdist, or if they rarely joke
+- "conversationalTics": catchphrases or verbal habits, how they greet people, how they end messages, filler expressions, unique vocabulary they've coined or adopted
+- "summary": 2 paragraphs giving a vivid description of this person's complete online persona — who they are, how they come across, what it feels like to have a conversation with them
 
 Return ONLY valid JSON. No markdown code fences. No extra text.
 
 Profile data:
-${JSON.stringify(profileData)}`;
+${dataForExtraction}`;
 
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash",
@@ -59,17 +85,22 @@ ${JSON.stringify(profileData)}`;
   try {
     let jsonText = text;
     if (jsonText.startsWith("```")) {
-      jsonText = jsonText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+      jsonText = jsonText
+        .replace(/^```(?:json)?\n?/, "")
+        .replace(/\n?```$/, "");
     }
     const personaProfile = JSON.parse(jsonText);
     return Response.json({ personaProfile });
-  } catch {
-   
+  } catch { //TODO: we will ltk that persona creation not succ
     return Response.json({
       personaProfile: {
         traits: "conversational, engaged",
         writingStyle: "Natural conversational tone based on their posts.",
         languagePatterns: "Standard social media communication patterns.",
+        topicsAndInterests: "Various topics related to their field.",
+        opinionsAndStances: "Not enough data to determine strong stances.",
+        humorStyle: "Occasional light humor.",
+        conversationalTics: "Standard conversational patterns.",
         summary: text || "A social media user with a unique voice.",
       },
     });
@@ -82,12 +113,19 @@ async function handleChat(body: {
     traits: string;
     writingStyle: string;
     languagePatterns: string;
+    topicsAndInterests: string;
+    opinionsAndStances: string;
+    humorStyle: string;
+    conversationalTics: string;
     summary: string;
   };
   profileData: unknown;
   username: string;
+  sessionId?: string;
+  summary?: string;
 }) {
-  const { messages, personaProfile, profileData, username } = body;
+  const { messages, personaProfile, profileData, username, sessionId, summary } =
+    body;
 
   if (!messages || !personaProfile) {
     return Response.json(
@@ -96,21 +134,61 @@ async function handleChat(body: {
     );
   }
 
-  const systemPrompt = `You ARE @${username}. You embody this person completely. Do not break character under any circumstances.
+  // Get the latest user message for RAG
+  const latestUserMsg = [...messages]
+    .reverse()
+    .find((m) => m.role === "user");
 
-Your personality traits: ${personaProfile.traits}
-Your writing style: ${personaProfile.writingStyle}
-Your language patterns: ${personaProfile.languagePatterns}
-Your persona summary: ${personaProfile.summary}
+  // RAG: retrieve relevant posts for this specific question
+  const source = ((profileData as { _source?: string })?._source ||
+    "twitter") as "twitter" | "linkedin";
+  let retrievedContext = "";
+  if (sessionId && latestUserMsg) {
+    try {
+      const relevant = await queryRelevant(
+        latestUserMsg.content,
+        sessionId,
+        source,
+        5
+      );
+      if (relevant.length > 0) {
+        retrievedContext = relevant
+          .map((r, i) => `[${i + 1}] ${r.metadata.text}`)
+          .join("\n\n");
+      }
+    } catch (err) {
+      console.warn("Persona RAG retrieval failed:", err);
+    }
+  }
 
-Here is the raw profile data for additional context on your views, interests, and recent activity:
-${JSON.stringify(profileData, null, 2)}
+  // Build the persona system prompt
+  let systemPrompt = `You ARE @${username}. You embody this person completely. Do not break character under any circumstances.
 
-Rules:
+## Your personality
+Traits: ${personaProfile.traits}
+Writing style: ${personaProfile.writingStyle}
+Language patterns: ${personaProfile.languagePatterns}
+Topics and interests: ${personaProfile.topicsAndInterests}
+Opinions and stances: ${personaProfile.opinionsAndStances}
+Humor style: ${personaProfile.humorStyle}
+Conversational habits: ${personaProfile.conversationalTics}
+
+## Who you are
+${personaProfile.summary}`;
+
+  if (summary) {
+    systemPrompt += `\n\n## Deeper context about your online presence\n${summary}`;
+  }
+
+  if (retrievedContext) {
+    systemPrompt += `\n\n## Your actual posts relevant to what's being discussed\nUse these to inform your response — reference them naturally as things you've said:\n${retrievedContext}`;
+  }
+
+  systemPrompt += `\n\n## Rules
 - Always respond exactly as this person would — use their vocabulary, sentence rhythm, and tone
-- Reference their actual interests and views when relevant
-- If asked something they'd have strong opinions on, voice those opinions in their voice
-- Keep responses feeling like a real social media conversation, not an essay
+- Reference your actual interests, views, and things you've posted when relevant
+- If asked something you'd have strong opinions on, voice those opinions in your voice
+- Keep responses feeling like a real conversation, not an essay
 - Never say you are an AI or break character
 - Be concise and natural
 - Do not go too overboard with the use of emojis`;

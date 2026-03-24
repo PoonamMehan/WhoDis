@@ -72,9 +72,13 @@ BRIGHTDATA_API_KEY=
 # Upstash Redis — for rate limiting — get from https://console.upstash.com/
 UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
+
+# Pinecone - vector database to store data embeddings and retrieve relevant data to the current user query
+PINECONE_API_KEY=
+PINECONE_INDEX=
 ```
 
-All five are required for the full experience. If the Upstash vars are missing, rate limiting is simply skipped (useful for local dev).
+All seven are required for the full experience. If the Upstash vars are missing, rate limiting is simply skipped (useful for local dev). If Pinecone vars are missing then RAG system is simply skipped.
 
 ## Rate limits
 

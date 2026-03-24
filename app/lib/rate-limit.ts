@@ -46,7 +46,7 @@ export async function checkRateLimit(
   getLimiter: () => Ratelimit,
   request: NextRequest
 ): Promise<Response | null> {
-  // Skip rate limiting if Upstash is not configured
+  //skip rate limiting if Upstash is not configured
   if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
     return null;
   }
@@ -57,7 +57,7 @@ export async function checkRateLimit(
 
   if (!success) {
     return Response.json(
-      { error: "Woah, too many requests. Touch some grass and come back to stalking in a bit." },
+      { error: "Too many requests. Please try again shortly." },
       {
         status: 429,
         headers: {

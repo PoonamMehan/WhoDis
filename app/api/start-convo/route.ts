@@ -1,5 +1,8 @@
 import { NextRequest } from "next/server";
+import crypto from "crypto";
 import { getStrictLimiter, checkRateLimit } from "@/app/lib/rate-limit";
+import { indexTwitterProfile, indexLinkedInProfile } from "@/app/lib/pinecone";
+import { generateProfileSummary } from "@/app/lib/summary";
 
 const LINKEDIN_URL_REGEX = /^https?:\/\/(www\.)?linkedin\.com\/in\/[\w-]+\/?$/;
 
@@ -16,8 +19,7 @@ async function fetchTwitterProfile(username: string) {
         "Content-Type": "application/json",
         "x-rapidapi-host": "twitter-api45.p.rapidapi.com",
         "x-rapidapi-key":
-          process.env.RAPIDAPI_KEY ||
-          "78c5c2d058msh6987d7eb329375dp16f268jsnc20910822a05",
+          process.env.RAPIDAPI_KEY!,
       },
     }
   );
@@ -53,8 +55,7 @@ async function fetchTwitterProfile(username: string) {
           "Content-Type": "application/json",
           "x-rapidapi-host": "twitter-api45.p.rapidapi.com",
           "x-rapidapi-key":
-            process.env.RAPIDAPI_KEY ||
-            "78c5c2d058msh6987d7eb329375dp16f268jsnc20910822a05",
+            process.env.RAPIDAPI_KEY!,
         },
       }
     );
@@ -74,9 +75,7 @@ async function fetchTwitterProfile(username: string) {
 }
 
 async function fetchLinkedInProfile(url: string) {
-  const brightdataKey =
-    process.env.BRIGHTDATA_API_KEY ||
-    "3a0e3f6d-6e44-4803-a657-c84687de2ee1";
+  const brightdataKey = process.env.BRIGHTDATA_API_KEY;
 
   const scrapeRes = await fetch(
     `https://api.brightdata.com/datasets/v3/scrape?dataset_id=gd_l1viktl72bvl7bjuj0&notify=false&include_errors=true`,
@@ -155,6 +154,7 @@ export async function POST(request: NextRequest) {
 
     let profileData;
     let displayName: string;
+    const sessionId = crypto.randomUUID();
 
     if (isLinkedInUrl(input)) {
       // LinkedIn flow
@@ -166,8 +166,26 @@ export async function POST(request: NextRequest) {
       displayName = `@${input}`;
     }
 
+    // RAG: index posts into Pinecone + generate holistic summary in parallel
+    let summary = "";
+    try {
+      const source = profileData._source as "twitter" | "linkedin";
+      const [, generatedSummary] = await Promise.all([
+        source === "twitter"
+          ? indexTwitterProfile(profileData, sessionId)
+          : indexLinkedInProfile(profileData, sessionId),
+        generateProfileSummary(profileData),
+      ]);
+      summary = generatedSummary;
+      console.log(`RAG indexing + summary done for session ${sessionId}`);
+    } catch (err) {
+      console.warn("RAG indexing/summary failed, continuing without:", err);
+    }
+
     return Response.json({
       profileData,
+      sessionId,
+      summary,
       firstMessage: `I've loaded the profile data for ${displayName}. You can now ask me anything about this person!`,
     });
   } catch (err: unknown) {

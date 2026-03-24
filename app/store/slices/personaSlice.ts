@@ -4,6 +4,10 @@ export type PersonaProfile = {
   traits: string;
   writingStyle: string;
   languagePatterns: string;
+  topicsAndInterests: string;
+  opinionsAndStances: string;
+  humorStyle: string;
+  conversationalTics: string;
   summary: string;
 };
 

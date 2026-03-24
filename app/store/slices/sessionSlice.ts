@@ -7,6 +7,8 @@ interface SessionState {
   phase: Phase;
   loadingStatus: string;
   profileData: unknown;
+  sessionId: string;
+  summary: string;
   error: string;
 }
 
@@ -15,6 +17,8 @@ const initialState: SessionState = {
   phase: "input",
   loadingStatus: "",
   profileData: null,
+  sessionId: "",
+  summary: "",
   error: "",
 };
 
@@ -34,6 +38,12 @@ const sessionSlice = createSlice({
     setProfileData(state, action: PayloadAction<unknown>) {
       state.profileData = action.payload;
     },
+    setSessionId(state, action: PayloadAction<string>) {
+      state.sessionId = action.payload;
+    },
+    setSummary(state, action: PayloadAction<string>) {
+      state.summary = action.payload;
+    },
     setError(state, action: PayloadAction<string>) {
       state.error = action.payload;
     },
@@ -48,6 +58,8 @@ export const {
   setPhase,
   setLoadingStatus,
   setProfileData,
+  setSessionId,
+  setSummary,
   setError,
   resetSession,
 } = sessionSlice.actions;

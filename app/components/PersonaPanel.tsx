@@ -17,6 +17,8 @@ export default function PersonaPanel() {
 
   const username = useAppSelector((s) => s.session.username);
   const profileData = useAppSelector((s) => s.session.profileData);
+  const sessionId = useAppSelector((s) => s.session.sessionId);
+  const sessionSummary = useAppSelector((s) => s.session.summary);
   const personaProfile = useAppSelector((s) => s.persona.personaProfile);
   const isPersonaLoading = useAppSelector((s) => s.persona.isPersonaLoading);
   const personaMessages = useAppSelector((s) => s.persona.personaMessages);
@@ -57,6 +59,8 @@ export default function PersonaPanel() {
           personaProfile,
           profileData,
           username: username.replace(/^@/, ""),
+          sessionId,
+          summary: sessionSummary,
         }),
       });
 

@@ -7,6 +7,8 @@ import {
   setPhase,
   setLoadingStatus,
   setProfileData,
+  setSessionId,
+  setSummary,
   setError,
   resetSession,
 } from "./store/slices/sessionSlice";
@@ -38,6 +40,8 @@ export default function Home() {
   const phase = useAppSelector((s) => s.session.phase);
   const loadingStatus = useAppSelector((s) => s.session.loadingStatus);
   const profileData = useAppSelector((s) => s.session.profileData);
+  const sessionId = useAppSelector((s) => s.session.sessionId);
+  const summary = useAppSelector((s) => s.session.summary);
   const error = useAppSelector((s) => s.session.error);
 
   const messages = useAppSelector((s) => s.qna.messages);
@@ -85,6 +89,8 @@ export default function Home() {
       }
 
       dispatch(setProfileData(data.profileData));
+      if (data.sessionId) dispatch(setSessionId(data.sessionId));
+      if (data.summary) dispatch(setSummary(data.summary));
       dispatch(
         setMessages([{ role: "assistant", content: data.firstMessage }])
       );
@@ -111,7 +117,7 @@ export default function Home() {
       const res = await fetch("/api/continue-conversation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: updatedMessages, profileData }),
+        body: JSON.stringify({ messages: updatedMessages, profileData, sessionId, summary }),
       });
 
       if (!res.ok) {
@@ -181,7 +187,7 @@ export default function Home() {
       const res = await fetch("/api/persona-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "extract", profileData }),
+        body: JSON.stringify({ mode: "extract", profileData, summary }),
       });
 
       if (!res.ok) {

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.46.0",
+    "@pinecone-database/pinecone": "^7.1.0",
     "@reduxjs/toolkit": "^2.11.2",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.37.0",
